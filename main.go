@@ -63,7 +63,7 @@ func action(commands []global.Command) {
 				args = ary[1:]
 			}
 			cmd := exec.Command(name, args...)
-			cmd.Env = commands
+			cmd.Env = v.Env
 			if v.User != "" {
 				u, err := user.Lookup(v.User)
 				if err != nil {
