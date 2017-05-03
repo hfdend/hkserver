@@ -1,61 +1,61 @@
 package main
 
 import (
-    "net/http"
-    "log"
-    "io/ioutil"
-    "encoding/json"
-    "git.125i.cn/hfdend/hkserver.git/global"
-    _ "git.125i.cn/hfdend/hkserver.git/conf"
-    "fmt"
-    "os/exec"
-    "os/user"
-    "strings"
-    "syscall"
-    "strconv"
+	"encoding/json"
+	"fmt"
 	"github.com/gogits/go-gogs-client"
+	_ "github.com/hfdend/hkserver/conf"
+	"github.com/hfdend/hkserver/global"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os/exec"
+	"os/user"
+	"strconv"
+	"strings"
+	"syscall"
 )
 
 func main() {
-    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-        if b, err := ioutil.ReadAll(r.Body); err != nil {
-            log.Println(err)
-        } else {
-            parse(b)
-        }
-    })
-    fmt.Println("listen: ", global.Config.Addr)
-    if err := http.ListenAndServe(global.Config.Addr, nil); err != nil {
-        log.Fatalln(err)
-    }
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if b, err := ioutil.ReadAll(r.Body); err != nil {
+			log.Println(err)
+		} else {
+			parse(b)
+		}
+	})
+	fmt.Println("listen: ", global.Config.Addr)
+	if err := http.ListenAndServe(global.Config.Addr, nil); err != nil {
+		log.Fatalln(err)
+	}
 }
 
 func parse(b []byte) {
-    var data gogs.PushPayload
-    if err := json.Unmarshal(b, &data); err != nil {
-        log.Println(err)
-        return
-    }
-    do(data)
+	var data gogs.PushPayload
+	if err := json.Unmarshal(b, &data); err != nil {
+		log.Println(err)
+		return
+	}
+	do(data)
 }
 
 func do(data gogs.PushPayload) {
-    if data.Repo == nil {
-        return
-    }
-    if len(global.Config.Hooks) == 0 {
-        return
-    }
-    for _, h := range global.Config.Hooks {
-        if h.Resp == data.Repo.Name && h.Branch == data.Branch() {
-            action(h.Commands)
-        }
-    }
+	if data.Repo == nil {
+		return
+	}
+	if len(global.Config.Hooks) == 0 {
+		return
+	}
+	for _, h := range global.Config.Hooks {
+		if h.Resp == data.Repo.Name && h.Branch == data.Branch() {
+			action(h.Commands)
+		}
+	}
 }
 
 func action(commands []global.Command) {
-    for _, v := range commands {
-        for _, s := range v.Args {
+	for _, v := range commands {
+		for _, s := range v.Args {
 			ary := strings.Split(s, " ")
 			name := ary[0]
 			var args []string
@@ -63,6 +63,7 @@ func action(commands []global.Command) {
 				args = ary[1:]
 			}
 			cmd := exec.Command(name, args...)
+			cmd.Env = commands
 			if v.User != "" {
 				u, err := user.Lookup(v.User)
 				if err != nil {
@@ -125,5 +126,5 @@ func action(commands []global.Command) {
 				return
 			}
 		}
-    }
+	}
 }
